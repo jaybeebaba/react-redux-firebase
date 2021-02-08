@@ -1,18 +1,56 @@
 import React from "react"
-// import {withRouter} from "react-router-dom"
+import {firestoreConnect} from "react-redux-firebase"
+import { connect } from "react-redux"
+import { compose } from "redux"
+import { Redirect } from "react-router-dom"
+import moment from "moment"
+import {deleteProject} from "../stores/actions/projectActions"
+
 
 function ProjectDetails(props){
-console.log(props.match.params.id)
-
-    return(
-        <div className="container project-details ">
-                <h3>Project Title - {props.match.params.id}</h3>
-                <p>What is Lorem Ipsum Lorem Ipsum is simply dummy text of the printing and typesetting industry Lorem Ipsum has been the industry's standard dummy text ever since the 1500s when an unknown printer took a galley of type and scrambled it to make a type specimen book it has</p>
-                <hr/>
-                <div>Created by: <i>Jaybee Baba</i></div>
-                <div><b>Posted:</b> 3rd September, 2015 by <i>2am</i> </div>
-            </div>
-    )
+    const handleDelete = () =>{
+        props.deleteProject(props.project)
+    }
+    console.log(props.project)
+    if(!props.auth.uid) return <Redirect to="/signin"/>
+    if(props.project){
+        return(
+            <div className="container project-details ">
+                    <h3>{props.project.title}</h3>
+                    <hr/>
+                    <p>{props.project.content}</p>
+                     <div>Created by: <i>{props.project.authorFirstName} {props.project.authorLastName}</i></div>
+                    <div><b>Posted:</b> {moment(props.project.createdAt.toDate()).calendar()} </div>
+                    <button className="btn btn-danger" onClick={()=>{handleDelete(props.project)}}>Delete</button>
+                </div>
+        )
+    } else{
+        return (
+            <div className = "text-center text-warning"> loading project...</div>
+        )
+    }
+   
 }
 
-export default ProjectDetails
+const mapStateToProps = (state, ownProps) =>{
+    const id = ownProps.match.params.id
+    const projects = state.firestore.data.projects
+    const project = projects.find(project=> project.id === id)
+    // const project = projects ? projects[id] :  null
+    return{
+        project: project,
+        auth: state.firebase.auth
+    }
+}
+
+const mapDispatchToProps = (dispatch) =>{
+    return{
+        deleteProject: (project) => dispatch(deleteProject(project)),
+    }
+}
+
+export default compose(
+    connect(mapStateToProps, mapDispatchToProps), 
+    firestoreConnect([
+        {collection: "projects"}
+    ]))(ProjectDetails)
